@@ -1,3 +1,4 @@
+// heuristics map
 var heuristics = [
 	[ 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 ],
 	[ 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 ],
@@ -13,18 +14,19 @@ var heuristics = [
 ];
 
 
-var MAX_X = 11;
-var MAX_Y = 11;
+var MAX_X = 20;		// maximum X
+var MAX_Y = 20;		// maximum Y
 
-var nodes;
-var openList;
-var closeList;
-var goal;
-var start;
+var nodes;			// node list
+var openList;		// open list
+var closeList;		// close list
+var goal;			// goal node
+var start;			// start node
 
-var result;
+var result;			// final node
 
 
+// coordinate 2D
 var Coord2D = (function(){
 
 	var obj = function(){};
@@ -36,12 +38,6 @@ var Coord2D = (function(){
 			this._x = x;
 			this._y = y;
 		},
-		getX : function(){
-			return this._x;
-		},
-		getY : function(){
-			return this._y;
-		},
 		equal : function( rhs ){
 			return ( this._x == rhs._x ) && ( this._y == rhs._y );
 		}
@@ -50,21 +46,23 @@ var Coord2D = (function(){
 	return obj;
 })();
 
+// node
 var Node = (function(){
 	
 	var obj = function(){};
 	
 	obj.prototype = {
-		_id : 0,
-		_coord : 0,
-		_h : 0,
-		_f : 0,
-		_parent : 0
+		_id : 0,			// 0:normal, 1:start, 2:end
+		_coord : 0,			// coordinate
+		_h : 0,				// heuristics
+		_f : 0,				// costs
+		_parent : 0			// parent coordinate
 	};
 	
 	return obj;
 })();
 
+// calculate distance. argument type is Coord2D object
 function distance( c1, c2 )
 {
 	var dx = Math.abs( c1._x - c2._x );
@@ -74,11 +72,13 @@ function distance( c1, c2 )
 	return dx + dy -d;
 }
 
+// transform Coord2D to index of nodes
 function coord_to_index( c )
 {
-	return c.getX() + c.getY() * MAX_X;
+	return c._x + c._y * MAX_X;
 }
-	
+
+// initialize
 function initAster()
 {
 	start = new Coord2D();
@@ -98,7 +98,12 @@ function initAster()
 				e._coord.set( j, i );
 				e._parent = new Coord2D();
 				e._parent.set( -1, -1 );
-				e._h = heuristics[ i ][ j ];
+				if( i < heuristics.length && j < heuristics[ 0 ].length ){
+					e._h = heuristics[ i ][ j ];
+				}
+				else{
+					e._h = 0;
+				}
 				return e;
 			})() );
 		}
@@ -111,7 +116,7 @@ function initAster()
 	closeList = new Array();
 }
 
-function search( dx, dy, node )
+function check( dx, dy, node )
 {
 	var coord = new Coord2D();
 	coord._x = node._coord._x + dx;
@@ -163,24 +168,23 @@ function search( dx, dy, node )
 	}
 }
 
-function calc()
+// find path
+// 0 : ok
+// 1 : failed
+function findPath()
 {
 	
-	// add start node to open list.
+	// add start node to open list
 	openList.push( nodes[ coord_to_index( start ) ] );
-	
-	console.log( coord_to_index( start ) );
-	
-	var iteration = 0;
 	
 	while( 1 ){
 		
-		// if open list is empty, path finding is failed.
+		// if open list is empty, path finding is failed
 		if( openList.length == 0 ){
-			console.log( "Open list is empty." );
 			return 1;
 		}
 		
+		// search node with minimum cost
 		var nodeIdx;
 		var minNode = openList[ 0 ];
 		for( nodeIdx = 0; nodeIdx < openList.length; ++nodeIdx ){
@@ -188,41 +192,32 @@ function calc()
 				minNode = openList[ nodeIdx ];
 			}
 		}
-		
 
-		// remove minimum cost OST.
+		// remove minimum cost OST
 		openList.some( function( v, i ){
 			if( v._coord.equal( minNode._coord ) ){
 				openList.splice( i, 1 );
 			}
 		});
 
-		// if minNode == goal, path finding is finished.
+		// if minNode == goal, path finding is finished
 		if( minNode._id == 2 ){
 			result = minNode;
-			console.log( "Find path." );
 			return 0;
 		}
-		// if minNode != goal, minNode is moved to close list.
+		// if minNode != goal, minNode is moved to close list
 		else{
 			closeList.push( minNode );
 		}
 		
-		// for all neighbors node.
-		search( -1, -1, minNode );
-		search( -1, 0, minNode );
-		search( -1, 1, minNode );
-		search( 0, -1, minNode );
-		search( 0, 1, minNode );
-		search( 1, -1, minNode );
-		search( 1, 0, minNode );
-		search( 1, 1, minNode );
-		
-		++iteration;
-		
-		//console.log( "minNode " + minNode._coord._x + "," + minNode._coord._y );
-		console.log( openList.length );
-		
-		console.log( "Path finding iteration : " + iteration );
+		// check for all neighbors node
+		check( -1, -1, minNode );
+		check( -1, 0, minNode );
+		check( -1, 1, minNode );
+		check( 0, -1, minNode );
+		check( 0, 1, minNode );
+		check( 1, -1, minNode );
+		check( 1, 0, minNode );
+		check( 1, 1, minNode );
 	}
 }
